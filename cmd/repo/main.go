@@ -3,10 +3,10 @@ package main
 import (
 	"errors"
 	"flag"
+	"github.com/masseelch/gogen/repo"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"gogen"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -62,7 +62,7 @@ func genRepositoryCode(fs flags) {
 			}
 
 			// Create a visitor for the current file.
-			v := gogen.RepositoryVisitor{
+			v := repo.RepositoryVisitor{
 				InputPath:         fs.InputPath,
 				PathInfo:          pathInfo,
 				FileInfo:          fileInfo,
