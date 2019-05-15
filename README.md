@@ -1,1 +1,1 @@
-# gogenrepo
+# gogen
