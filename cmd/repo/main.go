@@ -6,7 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"gogenrepo"
+	"gogen/repo"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -62,7 +62,7 @@ func genRepositoryCode(fs flags) {
 			}
 
 			// Create a visitor for the current file.
-			v := gogenrepo.RepositoryVisitor{
+			v := repo.RepositoryVisitor{
 				InputPath:         fs.InputPath,
 				PathInfo:          pathInfo,
 				FileInfo:          fileInfo,
