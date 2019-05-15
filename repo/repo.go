@@ -2,6 +2,7 @@ package repo
 
 import (
 	"bytes"
+	"github.com/masseelch/gogen"
 	"go/ast"
 	"go/format"
 	"os"
@@ -108,15 +109,15 @@ func (v RepositoryVisitor) Visit(n ast.Node) ast.Visitor {
 				for _, field := range st.Fields.List {
 					if c := field.Comment.Text(); strings.HasPrefix(c, "gen:") {
 						if strings.Contains(c, "select") {
-							selectFields = append(selectFields, toSnakeCase(field.Names[0].Name))
+							selectFields = append(selectFields, gogen.ToSnakeCase(field.Names[0].Name))
 							selectDestinations = append(selectDestinations, field.Names[0].Name)
 						}
 						if strings.Contains(c, "insert") {
-							insertFields = append(insertFields, toSnakeCase(field.Names[0].Name))
+							insertFields = append(insertFields, gogen.ToSnakeCase(field.Names[0].Name))
 							insertValues = append(insertValues, field.Names[0].Name)
 						}
 						if strings.Contains(c, "insert") {
-							updateFields = append(updateFields, toSnakeCase(field.Names[0].Name))
+							updateFields = append(updateFields, gogen.ToSnakeCase(field.Names[0].Name))
 							updateValues = append(updateValues, field.Names[0].Name)
 						}
 					}
