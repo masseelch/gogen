@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -50,13 +51,13 @@ func genRepositoryCode(fs flags) {
 
 	for _, fileInfo := range fileInfos {
 		if !fileInfo.IsDir() && strings.HasSuffix(fileInfo.Name(), ".go") && !strings.HasSuffix(fileInfo.Name(), ".g.go") {
-			filePath := fs.InputPath
+			path := fs.InputPath
 			if pathInfo.IsDir() {
-				filePath += "/" + fileInfo.Name()
+				path = filepath.Join(path, fileInfo.Name())
 			}
 
 			// Parse the source file.
-			parsedFile, err := parser.ParseFile(token.NewFileSet(), filePath, nil, parser.ParseComments)
+			parsedFile, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ParseComments)
 			if err != nil {
 				panic(err)
 			}
@@ -66,8 +67,8 @@ func genRepositoryCode(fs flags) {
 				InputPath:         fs.InputPath,
 				PathInfo:          pathInfo,
 				FileInfo:          fileInfo,
-				Package:           parsedFile.Name.Name,
 			}
+			
 			ast.Walk(v, parsedFile)
 		}
 	}
