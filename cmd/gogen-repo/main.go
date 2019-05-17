@@ -63,12 +63,12 @@ func genRepositoryCode(fs flags) {
 			}
 
 			// Create a visitor for the current file.
-			v := repo.RepositoryVisitor{
+			v := repo.Visitor{
 				InputPath:         fs.InputPath,
 				PathInfo:          pathInfo,
 				FileInfo:          fileInfo,
 			}
-			
+
 			ast.Walk(v, parsedFile)
 		}
 	}

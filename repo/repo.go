@@ -7,31 +7,23 @@ import (
 	"go/format"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"text/template"
 	"time"
 )
 
 var (
-	matchGoFile = regexp.MustCompile("(.)\\.go$")
-	intTpl      = template.Must(template.New("").Parse(string(kInterfaceTpl)))
-	implTpl     = template.Must(template.New("").Parse(string(kImplementationTpl)))
-	crudTpl     = template.Must(template.New("").Parse(string(kCrudTpl)))
+	intTpl      = template.Must(template.New("").Funcs(gogen.FuncMap).Parse(string(kInterfaceTpl)))
+	implTpl     = template.Must(template.New("").Funcs(gogen.FuncMap).Parse(string(kImplementationTpl)))
 )
 
 type (
-	CrudTplData struct {
-		Timestamp    time.Time
-		Type         string
-	}
-
-	RepositoryInterfaceTplData struct {
+	InterfaceTplData struct {
 		Timestamp time.Time
 		Type      string
 	}
 
-	RepositoryImplementationTplData struct {
+	ImplementationTplData struct {
 		Timestamp          time.Time
 		Type               string
 		InsertFields       []string
@@ -42,17 +34,19 @@ type (
 		UpdateValues       []interface{}
 	}
 
-	RepositoryVisitor struct {
+	Visitor struct {
 		InputPath string
 		PathInfo  os.FileInfo
 		FileInfo  os.FileInfo
+
+		repositories []string
 
 		// These are used to get information down the ast.
 		GenDecl *ast.GenDecl
 	}
 )
 
-func (v RepositoryVisitor) Visit(n ast.Node) ast.Visitor {
+func (v Visitor) Visit(n ast.Node) ast.Visitor {
 	if n == nil {
 		return nil
 	}
@@ -76,14 +70,13 @@ func (v RepositoryVisitor) Visit(n ast.Node) ast.Visitor {
 					filename = filepath.Join(filename, v.FileInfo.Name())
 				}
 
+				v.repositories = append(v.repositories, t.Name.Name)
+
 				// Generate the interfaces.
 				v.generateInterfaces(t, filename)
 
 				// Generate the implementations.
 				v.generateImplementations(t, st, filename)
-
-				// Generate the crud handlers.
-				v.generateCrudHandlers(t, filename)
 			}
 		}
 	}
@@ -91,45 +84,9 @@ func (v RepositoryVisitor) Visit(n ast.Node) ast.Visitor {
 	return v
 }
 
-func (v RepositoryVisitor) generateCrudHandlers(t *ast.TypeSpec, filename string) {
+func (v Visitor) generateInterfaces(t *ast.TypeSpec, filename string) {
 	var buf bytes.Buffer
-	d := CrudTplData{
-		Timestamp:    time.Now(),
-		Type:         t.Name.Name,
-	}
-	if err := crudTpl.Execute(&buf, d); err != nil {
-		panic(err)
-	}
-
-	// Format generated code.
-	g, err := format.Source(buf.Bytes())
-	if err != nil {
-		panic(err)
-	}
-
-	// Write interfaces to file.
-	f, err := os.Create(strings.ReplaceAll(
-		filename,
-		matchGoFile.ReplaceAllString(v.FileInfo.Name(), "${1}"),
-		"handler/"+matchGoFile.ReplaceAllString(v.FileInfo.Name(), "${1}.g"),
-	))
-	if err != nil {
-		panic(err)
-	}
-	if err != nil {
-		panic(err)
-	}
-
-	if _, err := f.Write(g); err != nil {
-		f.Close()
-		panic(err)
-	}
-	f.Close()
-}
-
-func (v RepositoryVisitor) generateInterfaces(t *ast.TypeSpec, filename string) {
-	var buf bytes.Buffer
-	d := RepositoryInterfaceTplData{
+	d := InterfaceTplData{
 		Timestamp: time.Now(),
 		Type:      t.Name.Name,
 	}
@@ -144,19 +101,18 @@ func (v RepositoryVisitor) generateInterfaces(t *ast.TypeSpec, filename string) 
 	}
 
 	// Write interfaces to file.
-	f, err := os.Create(matchGoFile.ReplaceAllString(filename, "${1}.g.go"))
+	f, err := os.Create(gogen.MatchGoFile.ReplaceAllString(filename, "${1}.g.go"))
 	if err != nil {
 		panic(err)
 	}
+	defer f.Close()
 
 	if _, err := f.Write(g); err != nil {
-		f.Close()
 		panic(err)
 	}
-	f.Close()
 }
 
-func (v RepositoryVisitor) generateImplementations(t *ast.TypeSpec, st *ast.StructType, filename string) {
+func (v Visitor) generateImplementations(t *ast.TypeSpec, st *ast.StructType, filename string) {
 	var insertFields []string
 	var insertValues []interface{}
 	var selectDestinations []interface{}
@@ -182,7 +138,7 @@ func (v RepositoryVisitor) generateImplementations(t *ast.TypeSpec, st *ast.Stru
 
 	// Generate the code.
 	var buf bytes.Buffer
-	d := RepositoryImplementationTplData{
+	d := ImplementationTplData{
 		Timestamp:          time.Now(),
 		Type:               t.Name.Name,
 		InsertFields:       insertFields,
@@ -205,16 +161,15 @@ func (v RepositoryVisitor) generateImplementations(t *ast.TypeSpec, st *ast.Stru
 	// Write interfaces to file.
 	f, err := os.Create(strings.ReplaceAll(
 		filename,
-		matchGoFile.ReplaceAllString(v.FileInfo.Name(), "${1}"),
-		"sql/"+matchGoFile.ReplaceAllString(v.FileInfo.Name(), "${1}.g"),
+		gogen.MatchGoFile.ReplaceAllString(v.FileInfo.Name(), "${1}"),
+		"sql/"+gogen.MatchGoFile.ReplaceAllString(v.FileInfo.Name(), "${1}.g"),
 	))
 	if err != nil {
 		panic(err)
 	}
+	defer f.Close()
 
 	if _, err := f.Write(g); err != nil {
-		f.Close()
 		panic(err)
 	}
-	f.Close()
 }
